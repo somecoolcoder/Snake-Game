@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake Simulation</title>
+<style>
+  .container {
+    display: flex;
+  }
+  .grid-container {
+    flex-grow: 1;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(40, 10px);
+    grid-template-rows: repeat(40, 10px);
+    gap: 1px;
+  }
+  .cell {
+    width: 10px;
+    height: 10px;
+    border: 1px solid white; /* Change border color to white */
+    background-color: lightgrey; /* Set background color to light grey */
+  }
+  .selected {
+    background-color: grey;
+  }
+  .snake-head { /* Add style for the snake head */
+    background-color: darkgreen;
+  }
+  .stats {
+    flex-basis: 300px;
+    margin-left: 20px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="grid-container">
+    <div id="grid" class="grid"></div>
+  </div>
+  <div class="stats" id="stats">
+    <h2>Statistics</h2>
+    <p>Snakes dead: <span id="snakesDead">0</span></p>
+    <p>Snakes dead due to age: <span id="snakesDeadAge">0</span></p>
+    <p>Snakes reproduced: <span id="snakesReproduced">0</span></p>
+    <p>Current snake population: <span id="currentPopulation">0</span></p>
+    <p>Current food: <span id="currentFood">0</span></p>
+    <p>Current fights: <span id="currentFights">0</span></p>
+    <label for="speed">Speed:</label>
+    <select id="speed">
+      <option value="0.25">0.25x</option>
+      <option value="0.5">0.5x</option>
+      <option value="1" selected>1x</option>
+      <option value="2">2x</option>
+      <option value="4">4x</option>
+      <option value="8">8x</option>
+      <option value="16">16x</option>
+      <option value="32">32x</option>
+      <option value="64">64x</option>
+    </select>
+    <button onclick="killAllSnakes()">Kill All Snakes</button>
+    <button onclick="clearSnakes()">Clear Snakes</button>
+    <button onclick="spawnOneSnake()">Spawn 1 Snake</button>
+  </div>
+</div>
+
+<script>
+const GRID_SIZE = 40;
+const NUM_SNAKES = 10;
+const INITIAL_SNAKE_LENGTH = 5;
+const FOOD_FREQUENCY = 5;
+const MAX_FOODS = 200;
+const SPLIT_LENGTH = 10;
+const MAX_SNAKE_AGE = 200;
+const REPRODUCTION_AGE = 60;
+const REPRODUCTION_CHANCE = 0.1;
+let speed = 1;
+let FOOD_GENERATED_ON_START = 50;
+
+let snakesDead = 0;
+let snakesDeadAge = 0; // New statistic for snake deaths due to age
+let snakesReproduced = 0;
+let currentPopulation = 0;
+let currentFood = 0;
+let currentFights = 0;
+
+class Snake {
+  constructor() {
+    this.segments = [];
+    this.direction = { x: 1, y: 0 };
+    this.age = 0;
+    for (let i = 0; i < INITIAL_SNAKE_LENGTH; i++) {
+      this.segments.push({ x: i, y: 0 });
+    }
+    this.selectedFood = null;
+  }
+
+  move() {
+    for (let i = this.segments.length - 1; i > 0; i--) {
+      this.segments[i] = { ...this.segments[i - 1] };
+    }
+    this.segments[0].x += this.direction.x;
+    this.segments[0].y += this.direction.y;
+    this.age++;
+  }
+
+  // Update direction to move towards the food
+  moveToFood(foods) {
+    let targetFood = this.selectedFood;
+    if (!targetFood) {
+      // Select a random food target
+      const availableFoods = foods.filter(food => !food.selected);
+      if (availableFoods.length > 0) {
+        targetFood = availableFoods[Math.floor(Math.random() * availableFoods.length)];
+        targetFood.selected = true;
+        this.selectedFood = targetFood;
+      }
+    }
+
+    if (targetFood) {
+      const dx = targetFood.x - this.segments[0].x;
+      const dy = targetFood.y - this.segments[0].y;
+      
+      if (dx !== 0) {
+        this.direction.x = Math.sign(dx);
+        this.direction.y = 0;
+      } else if (dy !== 0) {
+        this.direction.x = 0;
+        this.direction.y = Math.sign(dy);
+      }
+    }
+  }
+
+  // Reproduce if the snake reaches the split length and age is appropriate
+  reproduce() {
+    if (this.segments.length >= SPLIT_LENGTH && this.age >= REPRODUCTION_AGE && Math.random() < REPRODUCTION_CHANCE) {
+      const newSnakeSegments = this.segments.splice(this.segments.length / 2);
+      const newSnake = new Snake();
+      newSnake.segments = newSnakeSegments;
+      return newSnake;
+    }
+    return null;
+  }
+
+  // Fight another snake if both are trying to eat at the same food
+  fightWith(snake) {
+    const ownSegments = this.segments.length;
+    const opponentSegments = snake.segments.length;
+
+    // Calculate the chance of winning based on segment count
+    const ownChance = ownSegments / (ownSegments + opponentSegments);
+    const opponentChance = 1 - ownChance;
+
+    // Generate a random number between 0 and 1
+    const randomValue = Math.random();
+
+    if (randomValue < ownChance) {
+      // Current snake wins
+      return 'current';
+    } else {
+      // Opponent snake wins
+      return 'opponent';
+    }
+  }
+}
+
+const snakes = [];
+for (let i = 0; i < NUM_SNAKES; i++) {
+  snakes.push(new Snake());
+}
+
+let foods = [];
+
+function generateFood() {
+  if (foods.length < MAX_FOODS) {
+    let newFood;
+    do {
+      newFood = { x: Math.floor(Math.random() * GRID_SIZE), y: Math.floor(Math.random() * GRID_SIZE), selected: false };
+    } while (foods.some(food => food.x === newFood.x && food.y === newFood.y));
+    foods.push(newFood);
+  }
+}
+
+// Generate initial food items
+for (let i = 0; i < FOOD_GENERATED_ON_START; i++) {
+  generateFood();
+}
+
+function updateStats() {
+  document.getElementById('snakesDead').textContent = snakesDead;
+  document.getElementById('snakesDeadAge').textContent = snakesDeadAge; // Update snake deaths due to age
+  document.getElementById('snakesReproduced').textContent = snakesReproduced;
+  document.getElementById('currentPopulation').textContent = snakes.length;
+  document.getElementById('currentFood').textContent = foods.length;
+  document.getElementById('currentFights').textContent = currentFights;
+}
+
+function renderGrid() {
+  const gridElement = document.getElementById('grid');
+  gridElement.innerHTML = '';
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const cellElement = document.createElement('div');
+      cellElement.className = 'cell';
+      gridElement.appendChild(cellElement);
+    }
+  }
+}
+
+function renderSnakes() {
+  const gridElement = document.getElementById('grid');
+  snakes.forEach((snake) => {
+    snake.segments.forEach((segment, index) => {
+      const cellIndex = segment.y * GRID_SIZE + segment.x;
+      const cellElement = gridElement.childNodes[cellIndex];
+      cellElement.style.backgroundColor = index === 0 ? 'darkgreen' : 'green'; // Check if it's the head or body
+    });
+  });
+}
+
+function renderFood() {
+  const gridElement = document.getElementById('grid');
+  foods.forEach((food) => {
+    const cellIndex = food.y * GRID_SIZE + food.x;
+    const cellElement = gridElement.childNodes[cellIndex];
+    cellElement.style.backgroundColor = food.selected ? 'grey' : 'red';
+    cellElement.classList.add('selected');
+  });
+}
+
+function gameLoop() {
+  renderGrid();
+  renderSnakes();
+  renderFood();
+
+  // Check for reproduction
+  const newSnakes = [];
+  snakes.forEach((snake) => {
+    const newSnake = snake.reproduce();
+    if (newSnake) {
+      newSnakes.push(newSnake);
+      snakesReproduced++;
+    }
+  });
+  snakes.push(...newSnakes);
+
+  // Check for fights and snake deaths
+  const deadSnakes = [];
+  for (let i = 0; i < snakes.length; i++) {
+    if (snakes[i].age >= MAX_SNAKE_AGE) {
+      deadSnakes.push(i);
+    }
+    for (let j = i + 1; j < snakes.length; j++) {
+      if (snakes[i].selectedFood && snakes[j].selectedFood &&
+          snakes[i].segments[0].x === snakes[j].segments[0].x &&
+          snakes[i].segments[0].y === snakes[j].segments[0].y &&
+          snakes[i].selectedFood === snakes[j].selectedFood) {
+        const fightResult = snakes[i].fightWith(snakes[j]);
+        if (fightResult === 'current' || fightResult === 'both') {
+          deadSnakes.push(i);
+        }
+        if (fightResult === 'opponent' || fightResult === 'both') {
+          deadSnakes.push(j);
+        }
+        currentFights++;
+      }
+    }
+  }
+  
+  // Remove dead snakes and convert their segments into food
+  deadSnakes.sort((a, b) => b - a); // Sort in reverse order to avoid index shifting
+  deadSnakes.forEach((index) => {
+    const deadSnake = snakes.splice(index, 1)[0];
+    deadSnake.segments.forEach((segment) => {
+      foods.push({ x: segment.x, y: segment.y, selected: false });
+    });
+    if (deadSnake.age >= MAX_SNAKE_AGE) {
+      snakesDeadAge++; // Increment snake deaths due to age
+    }
+    snakesDead++;
+  });
+
+  // Remove selected food if all food items are selected
+  if (foods.every(food => food.selected)) {
+    foods.forEach(food => food.selected = false);
+  }
+
+  currentPopulation = snakes.length;
+  currentFood = foods.length;
+  
+  updateStats();
+
+  snakes.forEach((snake) => {
+    if (foods.length === 0) generateFood();
+    snake.moveToFood(foods); // Move towards food
+    snake.move();
+    if (snake.selectedFood && snake.segments[0].x === snake.selectedFood.x && snake.segments[0].y === snake.selectedFood.y) {
+      // Remove eaten food and generate new food
+      foods = foods.filter(food => food !== snake.selectedFood);
+      generateFood();
+      // Grow snake
+      snake.segments.push({ ...snake.segments[snake.segments.length - 1] });
+      snake.selectedFood = null;
+    }
+    snake.segments.forEach((segment) => {
+      if (segment.x >= GRID_SIZE) segment.x = 0;
+      if (segment.y >= GRID_SIZE) segment.y = 0;
+      if (segment.x < 0) segment.x = GRID_SIZE - 1;
+      if (segment.y < 0) segment.y = GRID_SIZE - 1;
+    });
+  });
+
+  setTimeout(gameLoop, 1000 / speed); // Adjusted timing based on speed
+}
+
+document.getElementById('speed').addEventListener('change', function() {
+  speed = parseFloat(this.value);
+});
+
+function killAllSnakes() {
+  snakes.forEach((snake) => {
+    snake.segments.forEach((segment) => {
+      foods.push({ x: segment.x, y: segment.y, selected: false });
+    });
+  });
+  snakes.splice(0, snakes.length);
+  snakesDead += currentPopulation;
+  currentPopulation = 0;
+  updateStats();
+}
+
+function clearSnakes() {
+  snakes.splice(0, snakes.length);
+  updateStats();
+}
+
+function spawnOneSnake() {
+  snakes.push(new Snake());
+  currentPopulation++;
+  updateStats();
+}
+
+gameLoop();
+</script>
+</body>
+</html>
+
