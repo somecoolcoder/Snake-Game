@@ -1,7 +1,3 @@
- 349 changes: 349 additions & 0 deletions 349  
-index.html
- 
-@@ -0,0 +1,349 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -53,17 +49,7 @@ index.html
     <p>Current food: <span id="currentFood">0</span></p>
     <p>Current fights: <span id="currentFights">0</span></p>
     <label for="speed">Speed:</label>
-    <select id="speed">
-      <option value="0.25">0.25x</option>
-      <option value="0.5">0.5x</option>
-      <option value="1" selected>1x</option>
-      <option value="2">2x</option>
-      <option value="4">4x</option>
-      <option value="8">8x</option>
-      <option value="16">16x</option>
-      <option value="32">32x</option>
-      <option value="64">64x</option>
-    </select>
+    <input type="text" id="speed" value="1">
     <button onclick="killAllSnakes()">Kill All Snakes</button>
     <button onclick="clearSnakes()">Clear Snakes</button>
     <button onclick="spawnOneSnake()">Spawn 1 Snake</button>
@@ -319,7 +305,7 @@ function gameLoop() {
   setTimeout(gameLoop, 1000 / speed); // Adjusted timing based on speed
 }
 
-document.getElementById('speed').addEventListener('change', function() {
+document.getElementById('speed').addEventListener('input', function() {
   speed = parseFloat(this.value);
 });
 
