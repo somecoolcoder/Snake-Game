@@ -48,18 +48,10 @@
     <p>Current snake population: <span id="currentPopulation">0</span></p>
     <p>Current food: <span id="currentFood">0</span></p>
     <p>Current fights: <span id="currentFights">0</span></p>
-    <label for="speed">Speed:</label>
-    <select id="speed">
-      <option value="0.25">0.25x</option>
-      <option value="0.5">0.5x</option>
-      <option value="1" selected>1x</option>
-      <option value="2">2x</option>
-      <option value="4">4x</option>
-      <option value="8">8x</option>
-      <option value="16">16x</option>
-      <option value="32">32x</option>
-      <option value="64">64x</option>
-    </select>
+    <label for="maxFPS">Max FPS:</label>
+     <input type="number" id="maxFPS" min="0" value="60">
+     <label for="maxTPS">Max TPS:</label>
+     <input type="number" id="maxTPS" min="-1" value="60">
     <button onclick="killAllSnakes()">Kill All Snakes</button>
     <button onclick="clearSnakes()">Clear Snakes</button>
     <button onclick="spawnOneSnake()">Spawn 1 Snake</button>
@@ -312,8 +304,23 @@ function gameLoop() {
     });
   });
 
-  setTimeout(gameLoop, 1000 / speed); // Adjusted timing based on speed
+  let maxFPS = 60;
+let maxTPS = 10;
+
+// Adjusted timing based on maxFPS
+setTimeout(gameLoop, 1000 / maxFPS);
 }
+
+function updateMaxFPS() {
+  maxFPS = parseInt(document.getElementById('maxFPS').value);
+}
+
+function updateMaxTPS() {
+  maxTPS = parseInt(document.getElementById('maxTPS').value);
+}
+
+document.getElementById('maxFPS').addEventListener('change', updateMaxFPS);
+document.getElementById('maxTPS').addEventListener('change', updateMaxTPS);
 
 document.getElementById('speed').addEventListener('change', function() {
   speed = parseFloat(this.value);
