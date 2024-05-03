@@ -60,10 +60,10 @@
 const GRID_SIZE = 40;
 const NUM_SNAKES = 10;
 const INITIAL_SNAKE_LENGTH = 5;
-const FOOD_FREQUENCY = 5;
+const FOOD_FREQUENCY = 10;
 const MAX_FOODS = 200;
 const SPLIT_LENGTH = 10;
-const MAX_SNAKE_AGE = 200;
+const MAX_SNAKE_AGE = 300;
 const REPRODUCTION_AGE = 100;
 const REPRODUCTION_CHANCE = 0.1;
 let speed = 1;
@@ -82,6 +82,7 @@ class Snake {
     this.segments = [];
     this.direction = { x: 1, y: 0 };
     this.age = 0;
+    this.reproductionFood = 0;
     for (let i = 0; i < INITIAL_SNAKE_LENGTH; i++) {
       this.segments.push({ x: i, y: 0 });
     }
@@ -126,9 +127,9 @@ class Snake {
 
   // Reproduce if the snake reaches the split length and age is appropriate
   reproduce() {
-    if (this.segments.length >= SPLIT_LENGTH && this.age >= REPRODUCTION_AGE && Math.random() < REPRODUCTION_CHANCE) {
-      const newSnakeSegments = this.segments.splice(this.segments.length / 2);
+if (this.segments.length >= SPLIT_LENGTH && this.age >= REPRODUCTION_AGE && this.reproductionFood >= 10 && Math.random() < REPRODUCTION_CHANCE) {      const newSnakeSegments = this.segments.splice(this.segments.length / 2);
       const newSnake = new Snake();
+      this.reproductionFood = 0;
       newSnake.segments = newSnakeSegments;
       return newSnake;
     }
@@ -314,11 +315,24 @@ function gameLoop() {
         foods.splice(overlappingFoodIndex, 1);
         // Grow the snake by adding a new segment at the end
         snake.segments.push({ ...snake.segments[snake.segments.length - 1] });
-        // Generate new food
-        generateFood();
+        snake.reproductionFood++;
       }
     });
   });
+
+// Initialize tick counter
+let tickCount = 0;
+
+// Inside gameLoop function
+tickCount++; // Increment tick count
+
+if (tickCount % 300 === 0) { // Check if 100 ticks have passed
+  // Respawn food
+  foods = []; // Clear existing food
+  for (let i = 0; i < MAX_FOODS; i++) {
+    generateFood(); // Generate new food items
+  }
+}
 
   setTimeout(gameLoop, 1000 / speed); // Adjusted timing based on speed
 }
