@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -75,6 +75,7 @@ let snakesReproduced = 0;
 let currentPopulation = 0;
 let currentFood = 0;
 let currentFights = 0;
+let activeBlocks = [];
 
 class Snake {
   constructor() {
@@ -170,6 +171,7 @@ function generateFood() {
       newFood = { x: Math.floor(Math.random() * GRID_SIZE), y: Math.floor(Math.random() * GRID_SIZE), selected: false };
     } while (foods.some(food => food.x === newFood.x && food.y === newFood.y));
     foods.push(newFood);
+    activeBlocks.push(newFood); // Add food coordinates to activeBlocks
   }
 }
 
@@ -299,6 +301,22 @@ function gameLoop() {
       if (segment.y >= GRID_SIZE) segment.y = 0;
       if (segment.x < 0) segment.x = GRID_SIZE - 1;
       if (segment.y < 0) segment.y = GRID_SIZE - 1;
+    });
+  });
+  
+    // Check for overlap between snake segments and food
+  snakes.forEach((snake) => {
+    snake.segments.forEach((segment) => {
+      // Check if segment overlaps with any food
+      const overlappingFoodIndex = foods.findIndex((food) => food.x === segment.x && food.y === segment.y);
+      if (overlappingFoodIndex !== -1) {
+        // Consume the food
+        foods.splice(overlappingFoodIndex, 1);
+        // Grow the snake by adding a new segment at the end
+        snake.segments.push({ ...snake.segments[snake.segments.length - 1] });
+        // Generate new food
+        generateFood();
+      }
     });
   });
 
